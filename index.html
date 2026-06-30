@@ -117,7 +117,7 @@
         <div class="bg-white/40 rounded-lg p-5 mb-6 shadow-sm border border-parchment-border flex flex-col gap-4">
             
             <!-- Row 1: Search & Basic Dropdowns -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <!-- Search -->
                 <div class="relative md:col-span-2">
                     <i class="fa-solid fa-search absolute left-3 top-3 text-parchment-muted"></i>
@@ -125,6 +125,12 @@
                            class="w-full bg-parchment-card border border-parchment-border text-parchment-text rounded-md pl-9 pr-4 py-2 focus:outline-none focus:border-parchment-accent focus:ring-1 focus:ring-parchment-accent transition-all font-semibold">
                 </div>
                 
+                <!-- Sort Filter -->
+                <select id="sort-filter" class="w-full bg-parchment-card border border-parchment-border text-parchment-text rounded-md px-3 py-2 focus:outline-none focus:border-parchment-accent font-semibold cursor-pointer">
+                    <option value="level">Sort: Level</option>
+                    <option value="alpha">Sort: A-Z</option>
+                </select>
+
                 <!-- Level Filter -->
                 <select id="level-filter" class="w-full bg-parchment-card border border-parchment-border text-parchment-text rounded-md px-3 py-2 focus:outline-none focus:border-parchment-accent font-semibold cursor-pointer">
                     <option value="all">All Levels</option>
@@ -340,7 +346,7 @@
             populateCustomFilterValues();
             
             // Event Listeners for Filters
-            const filterIds = ['search-input', 'level-filter', 'class-filter', 'school-filter', 'time-filter', 'filter-comp-v', 'filter-comp-s', 'filter-comp-m', 'filter-conc'];
+            const filterIds = ['search-input', 'sort-filter', 'level-filter', 'class-filter', 'school-filter', 'time-filter', 'filter-comp-v', 'filter-comp-s', 'filter-comp-m', 'filter-conc'];
             filterIds.forEach(id => {
                 const el = document.getElementById(id);
                 if(el) el.addEventListener(el.tagName === 'INPUT' && el.type === 'text' ? 'input' : 'change', updateUI);
@@ -589,7 +595,18 @@
             const baseSpells = typeof mySpells !== 'undefined' ? mySpells : [];
             const allSpells = [...baseSpells, ...customSpells];
             
-            allSpells.sort((a, b) => a.name.localeCompare(b.name));
+            const sortMethod = document.getElementById('sort-filter').value;
+
+            allSpells.sort((a, b) => {
+                if (sortMethod === 'level') {
+                    // Primary sort by Level, secondary sort Alphabetically
+                    if (a.level !== b.level) {
+                        return a.level - b.level;
+                    }
+                }
+                // Alphabetical sort (acts as default if sortMethod is 'alpha', or tie-breaker if 'level')
+                return a.name.localeCompare(b.name);
+            });
 
             const searchTerm = document.getElementById('search-input').value.toLowerCase();
             const levelFilter = document.getElementById('level-filter').value;
