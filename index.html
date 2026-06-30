@@ -4,12 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Spellbook</title>
-    <!-- Tailwind CSS for styling -->
+    
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts for that D&D Book feel -->
-    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
     
     <script>
         tailwind.config = {
@@ -21,12 +19,13 @@
                     },
                     colors: {
                         parchment: {
-                            base: '#fdf3e3', /* Main background */
-                            card: '#fbf5eb', /* Row background */
-                            border: '#dcb88e', /* Borders */
-                            text: '#2c241b', /* Main text */
-                            accent: '#7a2211', /* Reddish brown for names */
-                            muted: '#5c4d3c' /* Muted text */
+                            base: '#fdf3e3', 
+                            card: '#fbf5eb', 
+                            border: '#dcb88e', 
+                            text: '#2c241b', 
+                            accent: '#7a2211', 
+                            muted: '#5c4d3c',
+                            highlight: '#c79e65'
                         }
                     }
                 }
@@ -45,7 +44,7 @@
             color: currentColor;
             width: 1.4rem;
             height: 1.4rem;
-            border: 1px solid #a16207; /* amber-700 */
+            border: 1px solid #a16207;
             border-radius: 0.15em;
             display: grid;
             place-content: center;
@@ -53,7 +52,7 @@
             transition: all 0.2s ease-in-out;
         }
         .dnd-checkbox::before {
-            content: "\f00c"; /* FontAwesome check */
+            content: "\f00c";
             font-family: "Font Awesome 6 Free";
             font-weight: 900;
             font-size: 0.9rem;
@@ -70,6 +69,14 @@
         
         .tag-cleanup strong { color: #7a2211; font-weight: 700; }
         .tag-cleanup em { color: #0369a1; font-style: normal; font-weight: 600; }
+        
+        /* Custom Checkbox for Filters */
+        .filter-checkbox {
+            accent-color: #7a2211;
+            width: 1rem;
+            height: 1rem;
+            cursor: pointer;
+        }
     </style>
 
     <!-- LOAD YOUR DATA FILE HERE -->
@@ -77,36 +84,49 @@
 </head>
 <body class="min-h-screen font-sans antialiased p-4 md:p-8">
 
-    <div class="max-w-5xl mx-auto">
+    <div class="max-w-6xl mx-auto">
+        
         <!-- Header -->
-        <header class="flex flex-col md:flex-row justify-between items-center border-b-2 border-parchment-border pb-6 mb-8 gap-4">
+        <header class="flex flex-col md:flex-row justify-between items-center border-b-2 border-parchment-border pb-6 mb-8 gap-6">
             <div class="flex items-center gap-3">
                 <i class="fa-solid fa-book-open text-4xl text-parchment-accent"></i>
                 <h1 class="text-4xl font-serif font-bold text-parchment-accent tracking-tight">Grimoire</h1>
             </div>
-            <div class="flex gap-4 items-center">
-                <div class="text-sm font-semibold text-parchment-muted">
-                    <span id="total-spells-count" class="text-parchment-accent text-lg">0</span> Spells
+            
+            <div class="flex flex-col md:flex-row gap-6 items-center">
+                <!-- Stats -->
+                <div class="flex items-center gap-6 text-sm font-bold text-parchment-muted bg-parchment-border/20 px-4 py-2 rounded-lg border border-parchment-border/50">
+                    <div title="Total Spells Loaded"><i class="fa-solid fa-scroll text-parchment-accent"></i> <span id="total-spells-count">0</span> Total</div>
+                    <div title="Cantrips Known"><i class="fa-solid fa-brain text-blue-700"></i> <span id="known-count" class="text-blue-700 text-lg">0</span> Known</div>
+                    <div title="Spells Prepared"><i class="fa-solid fa-sun text-parchment-accent"></i> <span id="prepared-count" class="text-parchment-accent text-lg">0</span> Prepared</div>
                 </div>
-                <button id="toggle-prepared-view" class="bg-parchment-border hover:bg-[#c79e65] text-parchment-text rounded-md px-4 py-2 font-bold transition-colors shadow-sm flex items-center gap-2">
-                    <i class="fa-solid fa-bookmark"></i> Prepared (<span id="prepared-count">0</span>)
-                </button>
+                
+                <!-- Controls -->
+                <div class="flex gap-3">
+                    <button onclick="document.getElementById('add-spell-modal').classList.remove('hidden')" class="bg-parchment-card hover:bg-white border border-parchment-border text-parchment-accent rounded-md px-4 py-2 font-bold transition-colors shadow-sm flex items-center gap-2">
+                        <i class="fa-solid fa-pen-nib"></i> Scribe
+                    </button>
+                    <button id="toggle-selected-view" class="bg-parchment-border hover:bg-[#c79e65] text-parchment-text rounded-md px-4 py-2 font-bold transition-colors shadow-sm flex items-center gap-2">
+                        <i class="fa-solid fa-eye"></i> View Selections
+                    </button>
+                </div>
             </div>
         </header>
 
         <!-- Main Filters -->
-        <div class="bg-white/40 rounded-lg p-4 mb-6 shadow-sm border border-parchment-border flex flex-col gap-4">
+        <div class="bg-white/40 rounded-lg p-5 mb-6 shadow-sm border border-parchment-border flex flex-col gap-4">
             
-            <div class="flex flex-col md:flex-row gap-4">
+            <!-- Row 1: Search & Basic Dropdowns -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <!-- Search -->
-                <div class="relative flex-1">
+                <div class="relative md:col-span-2">
                     <i class="fa-solid fa-search absolute left-3 top-3 text-parchment-muted"></i>
-                    <input type="text" id="search-input" placeholder="Search spells..." 
+                    <input type="text" id="search-input" placeholder="Search spells by name..." 
                            class="w-full bg-parchment-card border border-parchment-border text-parchment-text rounded-md pl-9 pr-4 py-2 focus:outline-none focus:border-parchment-accent focus:ring-1 focus:ring-parchment-accent transition-all font-semibold">
                 </div>
                 
                 <!-- Level Filter -->
-                <select id="level-filter" class="w-full md:w-40 bg-parchment-card border border-parchment-border text-parchment-text rounded-md px-3 py-2 focus:outline-none focus:border-parchment-accent font-semibold cursor-pointer">
+                <select id="level-filter" class="w-full bg-parchment-card border border-parchment-border text-parchment-text rounded-md px-3 py-2 focus:outline-none focus:border-parchment-accent font-semibold cursor-pointer">
                     <option value="all">All Levels</option>
                     <option value="0">Cantrip</option>
                     <option value="1">Level 1</option>
@@ -120,43 +140,70 @@
                     <option value="9">Level 9</option>
                 </select>
 
-                <!-- Class Filter (Populated dynamically) -->
-                <select id="class-filter" class="w-full md:w-48 bg-parchment-card border border-parchment-border text-parchment-text rounded-md px-3 py-2 focus:outline-none focus:border-parchment-accent font-semibold cursor-pointer">
+                <!-- Class Filter -->
+                <select id="class-filter" class="w-full bg-parchment-card border border-parchment-border text-parchment-text rounded-md px-3 py-2 focus:outline-none focus:border-parchment-accent font-semibold cursor-pointer">
                     <option value="all">All Classes</option>
                     <!-- Options injected via JS -->
                 </select>
             </div>
 
-            <!-- Custom Filter Builder -->
-            <div class="flex flex-col md:flex-row gap-4 items-start md:items-center border-t border-parchment-border/50 pt-4">
-                <span class="text-sm font-bold text-parchment-muted uppercase tracking-wider">Create Filter:</span>
+            <!-- Row 2: Advanced Attributes -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-center border-t border-parchment-border/50 pt-4 mt-2">
                 
+                <select id="school-filter" class="w-full bg-parchment-card border border-parchment-border text-parchment-text rounded-md px-3 py-2 focus:outline-none focus:border-parchment-accent font-semibold cursor-pointer">
+                    <option value="all">All Schools</option>
+                    <option value="A">Abjuration</option>
+                    <option value="C">Conjuration</option>
+                    <option value="D">Divination</option>
+                    <option value="E">Enchantment</option>
+                    <option value="V">Evocation</option>
+                    <option value="I">Illusion</option>
+                    <option value="N">Necromancy</option>
+                    <option value="T">Transmutation</option>
+                </select>
+
+                <select id="time-filter" class="w-full bg-parchment-card border border-parchment-border text-parchment-text rounded-md px-3 py-2 focus:outline-none focus:border-parchment-accent font-semibold cursor-pointer">
+                    <option value="all">Any Casting Time</option>
+                    <option value="action">Action</option>
+                    <option value="bonus">Bonus Action</option>
+                    <option value="reaction">Reaction</option>
+                    <option value="minute">Minute(s)</option>
+                    <option value="hour">Hour(s)</option>
+                </select>
+
+                <div class="md:col-span-2 flex flex-wrap gap-4 items-center text-sm font-bold text-parchment-text px-2">
+                    <span class="text-parchment-muted uppercase tracking-wider text-xs mr-2">Filters:</span>
+                    <label class="flex items-center gap-1.5 cursor-pointer hover:text-parchment-accent"><input type="checkbox" id="filter-comp-v" class="filter-checkbox"> V</label>
+                    <label class="flex items-center gap-1.5 cursor-pointer hover:text-parchment-accent"><input type="checkbox" id="filter-comp-s" class="filter-checkbox"> S</label>
+                    <label class="flex items-center gap-1.5 cursor-pointer hover:text-parchment-accent"><input type="checkbox" id="filter-comp-m" class="filter-checkbox"> M</label>
+                    <div class="w-px h-4 bg-parchment-border mx-1"></div>
+                    <label class="flex items-center gap-1.5 cursor-pointer hover:text-blue-700 text-blue-900"><input type="checkbox" id="filter-conc" class="filter-checkbox"> Concentration</label>
+                </div>
+            </div>
+
+            <!-- Custom Filter Builder (Damage/Save) -->
+            <div class="flex flex-col md:flex-row gap-4 items-start md:items-center border-t border-parchment-border/50 pt-4 mt-2">
+                <span class="text-sm font-bold text-parchment-muted uppercase tracking-wider">Extra Filters:</span>
                 <div class="flex flex-wrap gap-2 items-center w-full">
                     <select id="custom-filter-type" class="bg-parchment-card border border-parchment-border text-parchment-text rounded-md px-2 py-1.5 text-sm focus:outline-none focus:border-parchment-accent">
-                        <option value="school">School</option>
                         <option value="damage">Damage Type</option>
                         <option value="save">Saving Throw</option>
                     </select>
-                    
                     <select id="custom-filter-value" class="bg-parchment-card border border-parchment-border text-parchment-text rounded-md px-2 py-1.5 text-sm focus:outline-none focus:border-parchment-accent min-w-[120px]">
-                        <!-- Populated by JS based on Type -->
+                        <!-- Populated by JS -->
                     </select>
-
-                    <button onclick="addCustomFilter()" class="bg-parchment-accent hover:bg-red-800 text-white rounded-md px-3 py-1.5 text-sm font-bold transition-colors">
+                    <button onclick="addCustomFilter()" class="bg-parchment-accent hover:bg-red-800 text-white rounded-md px-3 py-1.5 text-sm font-bold transition-colors shadow-sm">
                         <i class="fa-solid fa-plus"></i> Add
                     </button>
                 </div>
             </div>
 
             <!-- Active Custom Filters -->
-            <div id="active-custom-filters" class="flex flex-wrap gap-2 empty:hidden">
-                <!-- Badges injected via JS -->
-            </div>
-
+            <div id="active-custom-filters" class="flex flex-wrap gap-2 empty:hidden mt-2"></div>
         </div>
 
         <!-- Spell List -->
-        <div id="spell-list" class="flex flex-col gap-2">
+        <div id="spell-list" class="flex flex-col gap-2.5">
             <!-- Spells will be injected here by JavaScript -->
         </div>
 
@@ -166,13 +213,113 @@
             <h2 class="text-2xl font-serif font-bold text-parchment-muted">No spells found</h2>
             <p class="text-sm text-parchment-muted/80 mt-2">Adjust your filters to see more results.</p>
         </div>
+
+        <!-- Add Spell Modal -->
+        <div id="add-spell-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div class="bg-parchment-base border-2 border-parchment-border rounded-lg w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
+                <div class="p-5 border-b border-parchment-border/50 flex justify-between items-center bg-parchment-card rounded-t-lg">
+                    <h2 class="text-2xl font-serif font-bold text-parchment-accent">Scribe Custom Spell</h2>
+                    <button onclick="document.getElementById('add-spell-modal').classList.add('hidden')" class="text-parchment-muted hover:text-red-700 transition-colors">
+                        <i class="fa-solid fa-xmark text-2xl"></i>
+                    </button>
+                </div>
+                <div class="p-6 overflow-y-auto flex flex-col gap-5 text-parchment-text">
+                    <!-- Form Fields -->
+                    <div>
+                        <label class="block text-sm font-bold uppercase tracking-wider text-parchment-muted mb-1">Spell Name</label>
+                        <input type="text" id="cs-name" class="w-full bg-white border border-parchment-border rounded-md px-3 py-2 focus:ring-1 focus:ring-parchment-accent focus:outline-none font-semibold">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-bold uppercase tracking-wider text-parchment-muted mb-1">Level</label>
+                            <select id="cs-level" class="w-full bg-white border border-parchment-border rounded-md px-3 py-2 focus:ring-1 focus:ring-parchment-accent focus:outline-none">
+                                <option value="0">Cantrip (0)</option>
+                                <option value="1">1st Level</option>
+                                <option value="2">2nd Level</option>
+                                <option value="3">3rd Level</option>
+                                <option value="4">4th Level</option>
+                                <option value="5">5th Level</option>
+                                <option value="6">6th Level</option>
+                                <option value="7">7th Level</option>
+                                <option value="8">8th Level</option>
+                                <option value="9">9th Level</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold uppercase tracking-wider text-parchment-muted mb-1">School</label>
+                            <select id="cs-school" class="w-full bg-white border border-parchment-border rounded-md px-3 py-2 focus:ring-1 focus:ring-parchment-accent focus:outline-none">
+                                <option value="A">Abjuration</option>
+                                <option value="C">Conjuration</option>
+                                <option value="D">Divination</option>
+                                <option value="E">Enchantment</option>
+                                <option value="V">Evocation</option>
+                                <option value="I">Illusion</option>
+                                <option value="N">Necromancy</option>
+                                <option value="T">Transmutation</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-bold uppercase tracking-wider text-parchment-muted mb-1">Casting Time</label>
+                            <div class="flex gap-2">
+                                <input type="number" id="cs-time-num" value="1" min="1" class="w-16 bg-white border border-parchment-border rounded-md px-2 py-2 text-center">
+                                <select id="cs-time-unit" class="flex-1 bg-white border border-parchment-border rounded-md px-2 py-2">
+                                    <option value="action">Action</option>
+                                    <option value="bonus">Bonus Action</option>
+                                    <option value="reaction">Reaction</option>
+                                    <option value="minute">Minute(s)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold uppercase tracking-wider text-parchment-muted mb-1">Range</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="cs-range-num" value="60" class="w-16 bg-white border border-parchment-border rounded-md px-2 py-2 text-center">
+                                <select id="cs-range-type" class="flex-1 bg-white border border-parchment-border rounded-md px-2 py-2">
+                                    <option value="feet">Feet</option>
+                                    <option value="miles">Miles</option>
+                                    <option value="touch">Touch</option>
+                                    <option value="self">Self</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold uppercase tracking-wider text-parchment-muted mb-2">Components & Duration</label>
+                        <div class="flex flex-wrap items-center gap-6">
+                            <label class="flex items-center gap-2 cursor-pointer font-bold"><input type="checkbox" id="cs-comp-v" checked class="filter-checkbox"> V</label>
+                            <label class="flex items-center gap-2 cursor-pointer font-bold"><input type="checkbox" id="cs-comp-s" checked class="filter-checkbox"> S</label>
+                            <input type="text" id="cs-comp-m" placeholder="Material (optional)" class="w-40 bg-white border border-parchment-border rounded-md px-3 py-1.5 text-sm focus:outline-none">
+                            <label class="flex items-center gap-2 cursor-pointer font-bold text-blue-800"><input type="checkbox" id="cs-conc" class="filter-checkbox"> Concentration</label>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold uppercase tracking-wider text-parchment-muted mb-1">Duration text</label>
+                        <input type="text" id="cs-duration" value="1 minute" class="w-full bg-white border border-parchment-border rounded-md px-3 py-2 focus:ring-1 focus:ring-parchment-accent focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold uppercase tracking-wider text-parchment-muted mb-1">Description</label>
+                        <textarea id="cs-desc" rows="4" class="w-full bg-white border border-parchment-border rounded-md px-3 py-2 focus:ring-1 focus:ring-parchment-accent focus:outline-none" placeholder="Enter spell effects here..."></textarea>
+                    </div>
+                </div>
+                <div class="p-5 border-t border-parchment-border/50 bg-parchment-card rounded-b-lg flex justify-between items-center">
+                    <span class="text-sm font-bold text-parchment-muted"><i class="fa-solid fa-floppy-disk"></i> Saves to your browser storage</span>
+                    <button onclick="saveCustomSpell()" id="save-custom-spell" class="bg-parchment-accent hover:bg-red-800 text-white px-6 py-2 rounded-md font-bold transition-colors shadow-sm">
+                        <i class="fa-solid fa-check"></i> Scribe Spell
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
-        // State
-        let preparedSpells = new Set(JSON.parse(localStorage.getItem('preparedSpells')) || []);
-        let showOnlyPrepared = false;
-        let customFilters = []; // Format: { type: 'school', value: 'V', label: 'Evocation' }
+        // Use Browser Local Storage. Sets default to empty if not found.
+        let selectedSpells = new Set(JSON.parse(localStorage.getItem('mySelectedSpells')) || []);
+        let customSpells = JSON.parse(localStorage.getItem('myCustomSpells')) || [];
+        
+        let showOnlySelected = false;
+        let customFilters = []; 
         
         const schoolsMap = {
             'A': 'Abjuration', 'C': 'Conjuration', 'D': 'Divination', 
@@ -183,38 +330,41 @@
         const damageTypes = ['Acid', 'Bludgeoning', 'Cold', 'Fire', 'Force', 'Lightning', 'Necrotic', 'Piercing', 'Poison', 'Psychic', 'Radiant', 'Slashing', 'Thunder'];
         const saveTypes = ['Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma'];
 
-        // Initial Data Extraction
         document.addEventListener('DOMContentLoaded', () => {
             if (typeof mySpells === 'undefined') {
-                document.getElementById('spell-list').innerHTML = `<div class="p-4 bg-red-100 border border-red-400 text-red-700 rounded-md font-bold">Error: Could not load data. Make sure spells-data.js is linked properly.</div>`;
+                document.getElementById('spell-list').innerHTML = `<div class="p-4 bg-red-100 border border-red-400 text-red-700 rounded-md font-bold text-center">Error: Could not load data. Make sure spells-data.js is linked properly and contains valid data.</div>`;
                 return;
             }
 
             populateClassFilter();
-            populateCustomFilterValues(); // Init the first select box
+            populateCustomFilterValues();
             
-            // Listeners
-            document.getElementById('search-input').addEventListener('input', updateUI);
-            document.getElementById('level-filter').addEventListener('change', updateUI);
-            document.getElementById('class-filter').addEventListener('change', updateUI);
+            // Event Listeners for Filters
+            const filterIds = ['search-input', 'level-filter', 'class-filter', 'school-filter', 'time-filter', 'filter-comp-v', 'filter-comp-s', 'filter-comp-m', 'filter-conc'];
+            filterIds.forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.addEventListener(el.tagName === 'INPUT' && el.type === 'text' ? 'input' : 'change', updateUI);
+            });
+            
             document.getElementById('custom-filter-type').addEventListener('change', populateCustomFilterValues);
             
-            document.getElementById('toggle-prepared-view').addEventListener('click', () => {
-                showOnlyPrepared = !showOnlyPrepared;
+            document.getElementById('toggle-selected-view').addEventListener('click', () => {
+                showOnlySelected = !showOnlySelected;
                 updateUI();
             });
 
             updateUI();
         });
 
-        // Setup the Dynamic Class Filter
         const populateClassFilter = () => {
             const classSet = new Set();
-            mySpells.forEach(spell => {
-                if (spell.classes && spell.classes.fromClassList) {
-                    spell.classes.fromClassList.forEach(c => classSet.add(c.name));
-                }
-            });
+            if (typeof mySpells !== 'undefined') {
+                mySpells.forEach(spell => {
+                    if (spell.classes && spell.classes.fromClassList) {
+                        spell.classes.fromClassList.forEach(c => classSet.add(c.name));
+                    }
+                });
+            }
             const classFilter = document.getElementById('class-filter');
             Array.from(classSet).sort().forEach(className => {
                 const option = document.createElement('option');
@@ -224,35 +374,23 @@
             });
         };
 
-        // Setup the Custom Filter Builder Options
         const populateCustomFilterValues = () => {
             const type = document.getElementById('custom-filter-type').value;
             const valueSelect = document.getElementById('custom-filter-value');
-            valueSelect.innerHTML = ''; // Clear
+            valueSelect.innerHTML = ''; 
 
-            if (type === 'school') {
-                Object.entries(schoolsMap).forEach(([val, label]) => {
-                    valueSelect.innerHTML += `<option value="${val}">${label}</option>`;
-                });
-            } else if (type === 'damage') {
-                damageTypes.forEach(dmg => {
-                    valueSelect.innerHTML += `<option value="${dmg.toLowerCase()}">${dmg}</option>`;
-                });
-            } else if (type === 'save') {
-                saveTypes.forEach(save => {
-                    valueSelect.innerHTML += `<option value="${save.toLowerCase()}">${save}</option>`;
-                });
-            }
+            const options = type === 'damage' ? damageTypes : saveTypes;
+            options.forEach(opt => {
+                valueSelect.innerHTML += `<option value="${opt.toLowerCase()}">${opt}</option>`;
+            });
         };
 
-        
         window.addCustomFilter = () => {
             const type = document.getElementById('custom-filter-type').value;
             const val = document.getElementById('custom-filter-value').value;
             const textSelect = document.getElementById('custom-filter-value');
             const label = textSelect.options[textSelect.selectedIndex].text;
             
-            // Prevent duplicates
             if (!customFilters.some(f => f.type === type && f.value === val)) {
                 customFilters.push({ type, value: val, label });
                 renderCustomFilters();
@@ -278,8 +416,6 @@
             `).join('');
         };
 
-        const formatLevel = (lvl) => lvl === 0 ? "Cantrip" : `Level ${lvl}`;
-        
         const cleanTags = (text) => {
             if (typeof text !== 'string') return '';
             return text
@@ -300,26 +436,30 @@
                 } else if (entry.name && entry.entries) {
                     return `<p class="mb-3 tag-cleanup"><strong>${entry.name}.</strong> ${formatEntries(entry.entries)}</p>`;
                 } else if (entry.type === 'table') {
-                    return `<div class="text-xs italic bg-black/5 p-2 rounded mb-3 border border-black/10">Tables omitted for brief view. See full rules for table.</div>`;
+                    return `<div class="text-xs italic bg-black/5 p-2 rounded mb-3 border border-black/10">Tables omitted for brief view.</div>`;
                 }
                 return '';
             }).join('');
         };
 
-        // Render a single spell row
         const createSpellRow = (spell, index) => {
-            const isPrepared = preparedSpells.has(spell.name);
-            const levelText = formatLevel(spell.level);
+            const isSelected = selectedSpells.has(spell.name);
+            const isCantrip = spell.level === 0;
+            const badgeLabel = isCantrip ? 'Known' : 'Prepared';
+            
             const schoolName = schoolsMap[spell.school] || 'Unknown';
+            const isCustom = spell.isCustom || false;
             
-            // Format casting time
-            const timeObj = spell.time ? spell.time[0] : {number: 1, unit: 'action'};
-            const castTime = `${timeObj.number} ${timeObj.unit}`;
+            let castTime = "Unknown";
+            if (spell.time && spell.time.length > 0) {
+               castTime = `${spell.time[0].number} ${spell.time[0].unit}`;
+            }
 
-            // Format range
-            const rangeDist = spell.range?.distance ? `${spell.range.distance.amount || ''} ${spell.range.distance.type}` : 'Self';
+            let rangeDist = "Self";
+            if (spell.range && spell.range.distance) {
+                rangeDist = `${spell.range.distance.amount || ''} ${spell.range.distance.type || ''}`.trim();
+            }
             
-            // Extract components
             const comps = [];
             if (spell.components?.v) comps.push('V');
             if (spell.components?.s) comps.push('S');
@@ -329,46 +469,48 @@
             }
             const compText = comps.join(', ');
 
-            // Format duration
-            const durObj = spell.duration ? spell.duration[0] : {type: 'instant'};
-            let durText = durObj.type === 'instant' ? 'Instantaneous' : 
-                          (durObj.duration ? `${durObj.duration.amount} ${durObj.duration.type}` : 'Unknown');
-            if (durObj.concentration) durText = `Concentration, up to ${durText}`;
+            let durText = "Instantaneous";
+            let isConc = false;
+            if (spell.duration && spell.duration.length > 0) {
+                const durObj = spell.duration[0];
+                if (durObj.type !== 'instant') {
+                    durText = durObj.duration ? `${durObj.duration.amount || ''} ${durObj.duration.type || ''}`.trim() : (spell.durationRaw || 'Unknown');
+                }
+                if (durObj.concentration) {
+                    durText = `Concentration, up to ${durText}`;
+                    isConc = true;
+                }
+            }
 
             return `
                 <div class="spell-row bg-parchment-card rounded-md border border-parchment-border flex flex-col overflow-hidden">
                     
-                    <!-- Row Header (Always Visible) -->
-                    <div class="p-3 md:p-4 flex items-center justify-between cursor-pointer select-none" onclick="toggleExpand(${index})">
+                    <!-- Row Header -->
+                    <div class="p-3 md:px-5 md:py-4 flex items-center justify-between cursor-pointer select-none" onclick="window.toggleExpand(${index})">
                         
-                        <!-- Left Side: Name and Prepared Badge -->
-                        <div class="flex-1 flex flex-col md:flex-row md:items-center gap-1 md:gap-4">
-                            <div class="flex items-center gap-3 md:min-w-[220px]">
-                                <h3 class="font-serif font-bold text-lg text-parchment-accent uppercase tracking-wide leading-none">${spell.name}</h3>
-                                ${isPrepared ? `
-                                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border border-[#dcb88e] bg-[#fdf3e3] text-[#a16207]">
-                                        <i class="fa-solid fa-check"></i> Prepared
-                                    </span>
-                                ` : ''}
+                        <!-- Left Side: Name and Level Circle -->
+                        <div class="flex-1 flex items-center gap-3">
+                            <h3 class="font-serif font-bold text-lg text-parchment-accent uppercase tracking-wide leading-none">${spell.name}</h3>
+                            <div class="w-6 h-6 rounded-full bg-parchment-border text-[#4e3c27] flex items-center justify-center font-bold text-sm shadow-inner shrink-0" title="${isCantrip ? 'Cantrip' : 'Level ' + spell.level}">
+                                ${spell.level}
                             </div>
-                            
-                            <!-- Middle: Level and School -->
-                            <div class="text-xs md:text-sm font-semibold text-parchment-muted uppercase tracking-wider mt-1 md:mt-0">
-                                ${levelText} &bull; ${schoolName}
-                            </div>
+                            ${isCustom ? `<span class="text-[10px] bg-red-100 text-red-800 border border-red-300 px-1.5 py-0.5 rounded font-bold">CUSTOM</span>` : ''}
+                            ${isSelected ? `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border border-[#dcb88e] bg-[#fdf3e3] ${isCantrip ? 'text-blue-700' : 'text-[#a16207]'} ml-2">
+                                <i class="fa-solid fa-check"></i> ${badgeLabel}
+                            </span>` : ''}
+                        </div>
+                        
+                        <!-- Middle: Quick Stats (Hidden on small mobile) -->
+                        <div class="hidden md:flex flex-row items-center gap-5 text-[11px] font-bold text-parchment-muted uppercase tracking-wider mx-4">
+                            <div class="flex items-center gap-1.5 w-24" title="School"><i class="fa-solid fa-graduation-cap text-parchment-highlight"></i> ${schoolName}</div>
+                            <div class="flex items-center gap-1.5 w-24" title="Casting Time"><i class="fa-solid fa-stopwatch text-parchment-highlight"></i> ${castTime}</div>
+                            <div class="flex items-center gap-1.5 w-20" title="Range"><i class="fa-solid fa-arrows-alt-h text-parchment-highlight"></i> ${rangeDist}</div>
                         </div>
 
-                        <!-- Right Side: Stats & Controls -->
-                        <div class="flex items-center gap-4 md:gap-6 ml-4">
-                            <div class="hidden md:flex flex-col text-right text-xs md:text-sm text-parchment-muted leading-tight">
-                                <span>${castTime}</span>
-                                <span>${rangeDist}</span>
-                            </div>
-                            
-                            <div class="flex items-center gap-4 border-l border-parchment-border/50 pl-4 md:pl-6">
-                                <input type="checkbox" class="dnd-checkbox" ${isPrepared ? 'checked' : ''} onclick="event.stopPropagation(); togglePrepared('${spell.name.replace(/'/g, "\\'")}')" title="Toggle Prepared">
-                                <i id="chevron-${index}" class="fa-solid fa-chevron-down text-parchment-muted transition-transform duration-200 w-4 text-center"></i>
-                            </div>
+                        <!-- Right Side: Controls -->
+                        <div class="flex items-center gap-4 border-l border-parchment-border/50 pl-4">
+                            <input type="checkbox" class="dnd-checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); window.toggleSelected('${spell.name.replace(/'/g, "\\'")}')" title="Toggle Known/Prepared">
+                            <i id="chevron-${index}" class="fa-solid fa-chevron-down text-parchment-muted transition-transform duration-200 w-4 text-center"></i>
                         </div>
                     </div>
 
@@ -378,8 +520,10 @@
                             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 pb-4 border-b border-parchment-border/50 text-parchment-muted">
                                 <div><strong class="text-parchment-text block uppercase tracking-wider text-[10px]">Casting Time</strong> ${castTime}</div>
                                 <div><strong class="text-parchment-text block uppercase tracking-wider text-[10px]">Range</strong> ${rangeDist}</div>
-                                <div><strong class="text-parchment-text block uppercase tracking-wider text-[10px]">Components</strong> ${compText}</div>
-                                <div><strong class="text-parchment-text block uppercase tracking-wider text-[10px]">Duration</strong> ${durText}</div>
+                                <div class="col-span-1 md:col-span-2 flex flex-col gap-1">
+                                    <div><strong class="text-parchment-text uppercase tracking-wider text-[10px]">Components:</strong> ${compText}</div>
+                                    <div><strong class="text-parchment-text uppercase tracking-wider text-[10px]">Duration:</strong> ${durText}</div>
+                                </div>
                             </div>
                             <div class="spell-description text-[#3a2f24]">
                                 ${formatEntries(spell.entries)}
@@ -390,13 +534,14 @@
             `;
         };
 
-        window.togglePrepared = (spellName) => {
-            if (preparedSpells.has(spellName)) {
-                preparedSpells.delete(spellName);
+        window.toggleSelected = (spellName) => {
+            if (selectedSpells.has(spellName)) {
+                selectedSpells.delete(spellName);
             } else {
-                preparedSpells.add(spellName);
+                selectedSpells.add(spellName);
             }
-            localStorage.setItem('preparedSpells', JSON.stringify([...preparedSpells]));
+            // Save immediately to browser memory
+            localStorage.setItem('mySelectedSpells', JSON.stringify([...selectedSpells]));
             updateUI();
         };
 
@@ -413,35 +558,97 @@
             }
         };
 
+        window.saveCustomSpell = () => {
+            const spell = {
+                name: document.getElementById('cs-name').value || 'Unnamed Spell',
+                level: parseInt(document.getElementById('cs-level').value),
+                school: document.getElementById('cs-school').value,
+                time: [{ number: parseInt(document.getElementById('cs-time-num').value), unit: document.getElementById('cs-time-unit').value }],
+                range: { distance: { amount: document.getElementById('cs-range-num').value, type: document.getElementById('cs-range-type').value } },
+                components: { 
+                    v: document.getElementById('cs-comp-v').checked,
+                    s: document.getElementById('cs-comp-s').checked,
+                    m: document.getElementById('cs-comp-m').value
+                },
+                durationRaw: document.getElementById('cs-duration').value,
+                duration: [{ type: 'timed', concentration: document.getElementById('cs-conc').checked }],
+                entries: [document.getElementById('cs-desc').value],
+                isCustom: true
+            };
+            
+            customSpells.push(spell);
+            localStorage.setItem('myCustomSpells', JSON.stringify(customSpells));
+            
+            document.getElementById('add-spell-modal').classList.add('hidden');
+            document.getElementById('cs-name').value = '';
+            document.getElementById('cs-desc').value = '';
+            updateUI();
+        };
+
         const updateUI = () => {
-            if (typeof mySpells === 'undefined') return;
+            const baseSpells = typeof mySpells !== 'undefined' ? mySpells : [];
+            const allSpells = [...baseSpells, ...customSpells];
+            
+            allSpells.sort((a, b) => a.name.localeCompare(b.name));
 
             const searchTerm = document.getElementById('search-input').value.toLowerCase();
             const levelFilter = document.getElementById('level-filter').value;
             const classFilter = document.getElementById('class-filter').value;
+            const schoolFilter = document.getElementById('school-filter').value;
+            const timeFilter = document.getElementById('time-filter').value;
+            
+            const reqV = document.getElementById('filter-comp-v').checked;
+            const reqS = document.getElementById('filter-comp-s').checked;
+            const reqM = document.getElementById('filter-comp-m').checked;
+            const reqConc = document.getElementById('filter-conc').checked;
+
+            let knownCount = 0;
+            let preparedCount = 0;
 
             // Filter logic
-            const filteredSpells = mySpells.filter(spell => {
+            const filteredSpells = allSpells.filter(spell => {
+                
+                // Calculate stats while iterating
+                if(selectedSpells.has(spell.name)) {
+                    if(spell.level === 0) knownCount++;
+                    else preparedCount++;
+                }
+
+                // Check active filters
                 const matchesSearch = spell.name.toLowerCase().includes(searchTerm);
                 const matchesLevel = levelFilter === 'all' || spell.level.toString() === levelFilter;
+                const matchesSchool = schoolFilter === 'all' || spell.school === schoolFilter;
                 
-                // Class filter requires checking the nested fromClassList array
+                let matchesTime = true;
+                if (timeFilter !== 'all' && spell.time && spell.time.length > 0) {
+                    matchesTime = spell.time[0].unit === timeFilter;
+                }
+
                 let matchesClass = true;
                 if (classFilter !== 'all') {
                     matchesClass = spell.classes?.fromClassList?.some(c => c.name.toLowerCase() === classFilter) || false;
                 }
 
-                const matchesPrepared = showOnlyPrepared ? preparedSpells.has(spell.name) : true;
+                const matchesSelected = showOnlySelected ? selectedSpells.has(spell.name) : true;
+                
+                // Component Check
+                const matchesCompV = reqV ? spell.components?.v : true;
+                const matchesCompS = reqS ? spell.components?.s : true;
+                const matchesCompM = reqM ? !!spell.components?.m : true;
+                
+                // Concentration Check
+                let isConc = false;
+                if(spell.duration && spell.duration.length > 0) isConc = spell.duration[0].concentration;
+                const matchesConc = reqConc ? isConc : true;
 
-                // Process dynamic custom filters
+                // Custom Builder Checks
                 let matchesCustom = true;
                 for (const cf of customFilters) {
-                    if (cf.type === 'school' && spell.school !== cf.value) matchesCustom = false;
                     if (cf.type === 'damage' && (!spell.damageInflict || !spell.damageInflict.includes(cf.value))) matchesCustom = false;
                     if (cf.type === 'save' && (!spell.savingThrow || !spell.savingThrow.includes(cf.value))) matchesCustom = false;
                 }
                 
-                return matchesSearch && matchesLevel && matchesClass && matchesPrepared && matchesCustom;
+                return matchesSearch && matchesLevel && matchesClass && matchesSchool && matchesTime && matchesSelected && matchesCompV && matchesCompS && matchesCompM && matchesConc && matchesCustom;
             });
 
             // Update DOM
@@ -457,18 +664,19 @@
             }
 
             // Update Counts and buttons
-            document.getElementById('total-spells-count').innerText = mySpells.length;
-            document.getElementById('prepared-count').innerText = preparedSpells.size;
+            document.getElementById('total-spells-count').innerText = allSpells.length;
+            document.getElementById('known-count').innerText = knownCount;
+            document.getElementById('prepared-count').innerText = preparedCount;
             
-            const prepBtn = document.getElementById('toggle-prepared-view');
-            if(showOnlyPrepared) {
-                prepBtn.classList.add('bg-parchment-accent', 'text-white');
-                prepBtn.classList.remove('bg-parchment-border', 'text-parchment-text');
-                prepBtn.innerHTML = `<i class="fa-solid fa-arrow-left"></i> View All (${mySpells.length})`;
+            const btn = document.getElementById('toggle-selected-view');
+            if(showOnlySelected) {
+                btn.classList.add('bg-parchment-accent', 'text-white');
+                btn.classList.remove('bg-parchment-border', 'text-parchment-text');
+                btn.innerHTML = `<i class="fa-solid fa-arrow-left"></i> View All Filters`;
             } else {
-                prepBtn.classList.remove('bg-parchment-accent', 'text-white');
-                prepBtn.classList.add('bg-parchment-border', 'text-parchment-text');
-                prepBtn.innerHTML = `<i class="fa-solid fa-bookmark"></i> Prepared (${preparedSpells.size})`;
+                btn.classList.remove('bg-parchment-accent', 'text-white');
+                btn.classList.add('bg-parchment-border', 'text-parchment-text');
+                btn.innerHTML = `<i class="fa-solid fa-eye"></i> View Selections`;
             }
         };
     </script>
