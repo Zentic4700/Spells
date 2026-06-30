@@ -1,0 +1,331 @@
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Spellbook</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dnd: {
+                            red: '#E22822',
+                            dark: '#1a1a1a',
+                            panel: '#2d2d2d'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #121212; color: #e4e4e7; }
+        .spell-card { transition: all 0.2s ease-in-out; }
+        .spell-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); }
+        .tag-cleanup strong { color: #fca5a5; font-weight: 600; }
+        .tag-cleanup em { color: #93c5fd; font-style: normal; font-weight: 500; }
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+
+    <!-- LOAD YOUR DATA FILE HERE -->
+    <script src="spells-data.js"></script>
+</head>
+<body class="min-h-screen font-sans antialiased p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row justify-between items-center border-b border-gray-700 pb-6 mb-8 gap-4">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-book-journal-whills text-3xl text-dnd-red"></i>
+                <h1 class="text-3xl font-bold text-white tracking-tight">Interactive Spellbook</h1>
+            </div>
+            <div class="flex gap-4">
+                <div class="bg-gray-800 rounded-lg px-4 py-2 border border-gray-700 text-sm font-medium">
+                    <span id="total-spells-count" class="text-blue-400">0</span> Spells Loaded
+                </div>
+                <button id="toggle-prepared-view" class="bg-dnd-red hover:bg-red-700 text-white rounded-lg px-4 py-2 font-medium transition-colors shadow-lg flex items-center gap-2">
+                    <i class="fa-solid fa-star"></i> View Prepared (<span id="prepared-count">0</span>)
+                </button>
+            </div>
+        </header>
+
+        <!-- Filters -->
+        <div class="bg-dnd-panel rounded-xl p-5 mb-8 shadow-lg border border-gray-700 flex flex-col md:flex-row gap-4 items-center">
+            <div class="relative flex-1 w-full">
+                <i class="fa-solid fa-search absolute left-3 top-3.5 text-gray-400"></i>
+                <input type="text" id="search-input" placeholder="Search spells by name..." 
+                       class="w-full bg-gray-900 border border-gray-600 text-white rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:border-dnd-red focus:ring-1 focus:ring-dnd-red transition-all">
+            </div>
+            
+            <select id="level-filter" class="w-full md:w-48 bg-gray-900 border border-gray-600 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:border-blue-500 cursor-pointer">
+                <option value="all">All Levels</option>
+                <option value="0">Cantrips</option>
+                <option value="1">Level 1</option>
+                <option value="2">Level 2</option>
+                <option value="3">Level 3</option>
+                <option value="4">Level 4</option>
+                <option value="5">Level 5</option>
+                <option value="6">Level 6</option>
+                <option value="7">Level 7</option>
+                <option value="8">Level 8</option>
+                <option value="9">Level 9</option>
+            </select>
+
+            <select id="school-filter" class="w-full md:w-48 bg-gray-900 border border-gray-600 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:border-green-500 cursor-pointer">
+                <option value="all">All Schools</option>
+                <option value="A">Abjuration</option>
+                <option value="C">Conjuration</option>
+                <option value="D">Divination</option>
+                <option value="E">Enchantment</option>
+                <option value="V">Evocation</option>
+                <option value="I">Illusion</option>
+                <option value="N">Necromancy</option>
+                <option value="T">Transmutation</option>
+            </select>
+        </div>
+
+        <!-- Spell Grid -->
+        <div id="spell-grid" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            <!-- Spells will be injected here by JavaScript -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="hidden text-center py-20">
+            <i class="fa-solid fa-ghost text-6xl text-gray-600 mb-4"></i>
+            <h2 class="text-2xl font-semibold text-gray-400">No spells found</h2>
+            <p class="text-gray-500 mt-2">Try adjusting your filters or search term.</p>
+        </div>
+    </div>
+
+    <script>
+        // State management
+        let preparedSpells = new Set(JSON.parse(localStorage.getItem('preparedSpells')) || []);
+        let showOnlyPrepared = false;
+        
+        // Dictionaries for mapping 5e.tools codes to readable text
+        const schools = {
+            'A': 'Abjuration', 'C': 'Conjuration', 'D': 'Divination', 
+            'E': 'Enchantment', 'V': 'Evocation', 'I': 'Illusion', 
+            'N': 'Necromancy', 'T': 'Transmutation'
+        };
+
+        const schoolColors = {
+            'A': 'text-blue-400 bg-blue-400/10 border-blue-400/20',
+            'C': 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20',
+            'D': 'text-indigo-400 bg-indigo-400/10 border-indigo-400/20',
+            'E': 'text-pink-400 bg-pink-400/10 border-pink-400/20',
+            'V': 'text-red-400 bg-red-400/10 border-red-400/20',
+            'I': 'text-purple-400 bg-purple-400/10 border-purple-400/20',
+            'N': 'text-green-400 bg-green-400/10 border-green-400/20',
+            'T': 'text-orange-400 bg-orange-400/10 border-orange-400/20'
+        };
+
+        // Utility: Format levels
+        const formatLevel = (lvl) => lvl === 0 ? "Cantrip" : `Level ${lvl}`;
+
+        // Utility: Clean up 5e.tools specific tags like {@damage 1d6} or {@condition deafened}
+        const cleanTags = (text) => {
+            if (typeof text !== 'string') return '';
+            return text
+                // Replace basic tags {@tag value} -> value
+                .replace(/{@(damage|dice|chance) ([^}]+)}/g, '<strong>$2</strong>')
+                // Replace link tags {@tag value|link|etc} -> value
+                .replace(/{@(condition|spell|creature|item) ([^}|]+)[^}]*}/g, '<em>$2</em>')
+                .replace(/{@b ([^}]+)}/g, '<b>$1</b>')
+                .replace(/{@i ([^}]+)}/g, '<i>$1</i>');
+        };
+
+        // Utility: Format complex entries array into HTML paragraphs
+        const formatEntries = (entries) => {
+            if (!entries) return '';
+            return entries.map(entry => {
+                if (typeof entry === 'string') {
+                    return `<p class="mb-3 tag-cleanup leading-relaxed text-gray-300">${cleanTags(entry)}</p>`;
+                } else if (entry.type === 'list' && entry.items) {
+                    const listItems = entry.items.map(item => `<li class="ml-4 mb-1 tag-cleanup">${cleanTags(item)}</li>`).join('');
+                    return `<ul class="list-disc mb-3 text-gray-300">${listItems}</ul>`;
+                } else if (entry.name && entry.entries) {
+                    // For nested structures like options
+                    return `<p class="mb-3 tag-cleanup text-gray-300"><strong>${entry.name}.</strong> ${formatEntries(entry.entries)}</p>`;
+                }
+                return '';
+            }).join('');
+        };
+
+        // Render a single spell card
+        const createSpellCard = (spell, index) => {
+            const isPrepared = preparedSpells.has(spell.name);
+            const levelText = formatLevel(spell.level);
+            const schoolName = schools[spell.school] || 'Unknown';
+            const schoolStyle = schoolColors[spell.school] || 'text-gray-400 bg-gray-800 border-gray-700';
+            
+            // Format casting time
+            const timeObj = spell.time ? spell.time[0] : {number: 1, unit: 'action'};
+            const castTime = `${timeObj.number} ${timeObj.unit}`;
+
+            // Format range
+            const rangeDist = spell.range?.distance ? `${spell.range.distance.amount || ''} ${spell.range.distance.type}` : 'Self';
+            
+            // Format components
+            const comps = [];
+            if (spell.components?.v) comps.push('V');
+            if (spell.components?.s) comps.push('S');
+            if (spell.components?.m) {
+                const matText = typeof spell.components.m === 'object' ? spell.components.m.text : spell.components.m;
+                comps.push(`M (${matText || 'materials'})`);
+            }
+            const compText = comps.join(', ');
+
+            // Format duration
+            const durObj = spell.duration ? spell.duration[0] : {type: 'instant'};
+            let durText = durObj.type === 'instant' ? 'Instantaneous' : 
+                          (durObj.duration ? `${durObj.duration.amount} ${durObj.duration.type}` : 'Unknown');
+            if (durObj.concentration) durText = `Concentration, up to ${durText}`;
+
+            return `
+                <div class="spell-card bg-gray-800 rounded-xl border border-gray-700 overflow-hidden flex flex-col h-full">
+                    <!-- Card Header -->
+                    <div class="p-5 border-b border-gray-700 relative">
+                        <button onclick="togglePrepared('${spell.name.replace(/'/g, "\\'")}')" 
+                                class="absolute top-4 right-4 text-2xl transition-colors ${isPrepared ? 'text-yellow-400 hover:text-yellow-300' : 'text-gray-600 hover:text-yellow-400'}">
+                            <i class="fa-solid fa-star"></i>
+                        </button>
+                        <h3 class="text-xl font-bold text-white pr-8 mb-2">${spell.name}</h3>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="text-xs font-semibold px-2.5 py-1 rounded-md bg-gray-900 border border-gray-600 text-gray-300">
+                                ${levelText}
+                            </span>
+                            <span class="text-xs font-semibold px-2.5 py-1 rounded-md border ${schoolStyle}">
+                                ${schoolName}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <!-- Card Body (Stats) -->
+                    <div class="px-5 py-4 bg-gray-900/50 flex-grow text-sm grid grid-cols-2 gap-y-3 gap-x-2 text-gray-300">
+                        <div><strong class="text-gray-500 block text-xs uppercase tracking-wider">Casting Time</strong> ${castTime}</div>
+                        <div><strong class="text-gray-500 block text-xs uppercase tracking-wider">Range</strong> ${rangeDist}</div>
+                        <div class="col-span-2"><strong class="text-gray-500 block text-xs uppercase tracking-wider">Components</strong> ${compText}</div>
+                        <div class="col-span-2"><strong class="text-gray-500 block text-xs uppercase tracking-wider">Duration</strong> ${durText}</div>
+                    </div>
+
+                    <!-- Description Accordion -->
+                    <div class="p-5 border-t border-gray-700">
+                        <div class="spell-description max-h-24 overflow-hidden relative text-sm" id="desc-${index}">
+                            ${formatEntries(spell.entries)}
+                            <div class="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-gray-800 to-transparent fade-out pointer-events-none"></div>
+                        </div>
+                        <button onclick="toggleExpand(${index})" id="btn-${index}" class="text-blue-400 hover:text-blue-300 text-sm font-medium mt-2 w-full text-center">
+                            Read More <i class="fa-solid fa-chevron-down ml-1"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        };
+
+        // Actions
+        window.togglePrepared = (spellName) => {
+            if (preparedSpells.has(spellName)) {
+                preparedSpells.delete(spellName);
+            } else {
+                preparedSpells.add(spellName);
+            }
+            localStorage.setItem('preparedSpells', JSON.stringify([...preparedSpells]));
+            updateUI();
+        };
+
+        window.toggleExpand = (index) => {
+            const desc = document.getElementById(`desc-${index}`);
+            const btn = document.getElementById(`btn-${index}`);
+            const fade = desc.querySelector('.fade-out');
+            
+            if (desc.classList.contains('max-h-24')) {
+                desc.classList.remove('max-h-24');
+                if(fade) fade.style.display = 'none';
+                btn.innerHTML = 'Show Less <i class="fa-solid fa-chevron-up ml-1"></i>';
+            } else {
+                desc.classList.add('max-h-24');
+                if(fade) fade.style.display = 'block';
+                btn.innerHTML = 'Read More <i class="fa-solid fa-chevron-down ml-1"></i>';
+            }
+        };
+
+        // Main filtering and rendering loop
+        const updateUI = () => {
+            if (typeof mySpells === 'undefined') {
+                document.getElementById('spell-grid').innerHTML = `<div class="col-span-full text-red-400 text-center p-8 bg-red-900/20 rounded-xl border border-red-900">Error: Could not load data. Make sure spells-data.js is linked properly and contains 'const mySpells = [...]'</div>`;
+                return;
+            }
+
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const levelFilter = document.getElementById('level-filter').value;
+            const schoolFilter = document.getElementById('school-filter').value;
+
+            // Filter logic
+            const filteredSpells = mySpells.filter(spell => {
+                const matchesSearch = spell.name.toLowerCase().includes(searchTerm);
+                const matchesLevel = levelFilter === 'all' || spell.level.toString() === levelFilter;
+                const matchesSchool = schoolFilter === 'all' || spell.school === schoolFilter;
+                const matchesPrepared = showOnlyPrepared ? preparedSpells.has(spell.name) : true;
+                
+                return matchesSearch && matchesLevel && matchesSchool && matchesPrepared;
+            });
+
+            // Update DOM
+            const grid = document.getElementById('spell-grid');
+            const emptyState = document.getElementById('empty-state');
+            
+            if (filteredSpells.length === 0) {
+                grid.innerHTML = '';
+                emptyState.classList.remove('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+                grid.innerHTML = filteredSpells.map((spell, idx) => createSpellCard(spell, idx)).join('');
+            }
+
+            // Update Counts
+            document.getElementById('total-spells-count').innerText = mySpells.length;
+            document.getElementById('prepared-count').innerText = preparedSpells.size;
+            
+            const prepBtn = document.getElementById('toggle-prepared-view');
+            if(showOnlyPrepared) {
+                prepBtn.classList.remove('bg-dnd-red');
+                prepBtn.classList.add('bg-yellow-600', 'hover:bg-yellow-500');
+                prepBtn.innerHTML = `<i class="fa-solid fa-arrow-left"></i> View All (${mySpells.length})`;
+            } else {
+                prepBtn.classList.remove('bg-yellow-600', 'hover:bg-yellow-500');
+                prepBtn.classList.add('bg-dnd-red');
+                prepBtn.innerHTML = `<i class="fa-solid fa-star"></i> View Prepared (${preparedSpells.size})`;
+            }
+        };
+
+        // Event Listeners Initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check if mySpells exists
+            if (typeof mySpells === 'undefined') {
+                console.error("spells-data.js did not load correctly.");
+            }
+
+            document.getElementById('search-input').addEventListener('input', updateUI);
+            document.getElementById('level-filter').addEventListener('change', updateUI);
+            document.getElementById('school-filter').addEventListener('change', updateUI);
+            
+            document.getElementById('toggle-prepared-view').addEventListener('click', () => {
+                showOnlyPrepared = !showOnlyPrepared;
+                updateUI();
+            });
+
+            // Initial render
+            updateUI();
+        });
+    </script>
+</body>
+</html>
